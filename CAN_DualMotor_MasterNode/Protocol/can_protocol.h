@@ -21,7 +21,13 @@ typedef enum
     MOTOR_CMD_RUN  = 1
 
 } Motor_Command_t;
-
+typedef enum
+{
+    CAN_MOTOR_STATE_IDLE = 0,
+    CAN_MOTOR_STATE_RUNNING,
+    CAN_MOTOR_STATE_DONE,
+    CAN_MOTOR_STATE_FAULT
+} Can_MotorState_t;
 
 /* 主机发给从机的命令 */
 typedef struct
@@ -64,4 +70,6 @@ uint8_t CanProtocol_GetSlave1Status(
 uint8_t CanProtocol_GetSlave2Status(
     Can_MotorStatus_t *status);
 
+
+uint8_t CanProtocol_GetHeartbeat(uint8_t slave_id);
 #endif

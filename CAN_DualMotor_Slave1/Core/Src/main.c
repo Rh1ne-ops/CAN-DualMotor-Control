@@ -27,6 +27,9 @@
 /* USER CODE BEGIN Includes */
 #include "Bsp_Can.h"
 #include "can_protocol.h"
+#include "App.h"
+#include "Encoder.h"
+#include "motor_control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,12 +50,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-Can_Frame_t frame;
+App_SlaveRuntime_t debug_runtime;
 
-Can_MotorCommand_t received_cmd;
-Can_MotorStatus_t test_status;
-
-uint32_t cmd_count = 0;
+volatile uint8_t debug_tx_ok = 0;
+volatile uint32_t debug_can_error = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,26 +103,8 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 	Can_Init();
-
-GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-__HAL_RCC_GPIOA_CLK_ENABLE();
-
-/* PA8：LED输出 */
-GPIO_InitStruct.Pin = GPIO_PIN_8;
-GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-GPIO_InitStruct.Pull = GPIO_NOPULL;
-GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-
-HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-
-/* 准备一组假的状态数据 */
-test_status.total_count = 1234;
-test_status.delta_count = 56;
-test_status.state = 1;
-
+	
+	App_Init();
 //	HAL_TIM_Base_Start_IT(&htim4);
   /* USER CODE END 2 */
 
@@ -132,20 +115,14 @@ test_status.state = 1;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		CanProtocol_Process();
+		 App_Task();
+		App_GetRuntime(&debug_runtime);	
+//	uint8_t test_data = 0x01;
 
-		if (CanProtocol_GetCommand(&received_cmd))
-		{
-				cmd_count++;
+//    debug_tx_ok = Can_Send(0x301, &test_data, 1);
+//    debug_can_error = HAL_CAN_GetError(&hcan);
 
-				/* 收到一条正确协议命令就翻转LED */
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
-
-				/* 给主机回复一帧状态 */
-				CanProtocol_SendMotorStatus(&test_status);
-		}
-		
-
+//    HAL_Delay(500);
 	}
   /* USER CODE END 3 */
 }
@@ -190,7 +167,14 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_TIM_PeriodElapsedCallback(
+    TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM4)
+    {
+        MotorControl_Update();
+    }
+}
 /* USER CODE END 4 */
 
 /**

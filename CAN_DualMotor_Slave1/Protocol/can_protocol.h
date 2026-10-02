@@ -54,7 +54,13 @@ typedef struct
     uint8_t state;
 
 } Can_MotorStatus_t;
-
+typedef enum
+{
+    CAN_MOTOR_STATE_IDLE = 0,
+    CAN_MOTOR_STATE_RUNNING,
+    CAN_MOTOR_STATE_DONE,
+    CAN_MOTOR_STATE_FAULT
+} Can_MotorState_t;
 
 /* 处理接收到的CAN帧 */
 void CanProtocol_Process(void);
