@@ -52,11 +52,11 @@ static uint8_t Key_ReadRaw(Key_t key)
             break;
 
         case KEY_STOP:
-            state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8);
+            state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
             break;
 
         case KEY_PAGE:
-            state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
+            state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8);
             break;
 
         default:

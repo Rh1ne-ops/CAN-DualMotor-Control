@@ -10,9 +10,27 @@
    ========================= */
 typedef enum
 {
-    APP_MODE_SYNC = 0,      // 两个从机同时启动
-    APP_MODE_ASYNC          // Slave1先启动，Slave2延时启动
+    APP_MODE_S1_ONLY = 0,   /* 只运行 Slave1 */
+    APP_MODE_S2_ONLY,       /* 只运行 Slave2 */
+    APP_MODE_SYNC,          /* 两机同时启动；同步任务时使用相同目标 */
+    APP_MODE_ASYNC,         /* 两机同时启动，但圈数/速度可分别设置 */
+    APP_MODE_DELAY,         /* Slave1先启动，Slave2延时启动 */
+    APP_MODE_COMBO,         /* 第一段运行 -> 等待 -> 反向第二段运行 */
+
+    APP_MODE_COUNT
 } App_Mode_t;
+
+
+/* =========================
+   组合动作阶段
+   ========================= */
+typedef enum
+{
+    APP_PHASE_NONE = 0,
+    APP_PHASE_PRIMARY,      /* 第一段动作 */
+    APP_PHASE_WAIT,         /* 中间等待 */
+    APP_PHASE_SECONDARY     /* 第二段反向动作 */
+} App_Phase_t;
 
 
 /* =========================
@@ -20,11 +38,11 @@ typedef enum
    ========================= */
 typedef enum
 {
-    APP_STATE_IDLE = 0,     // 待机
-    APP_STATE_RUNNING,      // 运行
-    APP_STATE_STOPPING,     // 正在停止
-    APP_STATE_FINISHED,     // 正常完成
-    APP_STATE_FAULT         // 故障
+    APP_STATE_IDLE = 0,
+    APP_STATE_RUNNING,
+    APP_STATE_STOPPING,
+    APP_STATE_FINISHED,
+    APP_STATE_FAULT
 } App_State_t;
 
 
@@ -68,9 +86,9 @@ typedef enum
    ========================= */
 typedef struct
 {
-    int32_t target_count;       // 相对目标编码器计数
-    int16_t target_speed;       // 目标速度
-    int8_t  direction;          // 1 / -1
+    int32_t target_count;       /* 相对目标编码器计数，保存绝对值 */
+    int16_t target_speed;       /* 速度上限，单位仍为 count / 10ms */
+    int8_t  direction;          /* +1 / -1 */
 } App_MotorTarget_t;
 
 
@@ -84,20 +102,25 @@ typedef struct
     App_MotorTarget_t slave1;
     App_MotorTarget_t slave2;
 
-    uint16_t async_delay_ms;    // 异步模式下 Slave2 延迟启动
+    /*
+     * DELAY模式：Slave2相对Slave1的启动延时。
+     * COMBO模式：第一段与第二段之间的等待时间。
+     */
+    uint16_t async_delay_ms;
 } App_Config_t;
 
 
 /* =========================
    APP运行信息
 
-   OLED / 状态机以后只读这里
+   OLED / 状态机只读取这里
    ========================= */
 typedef struct
 {
     App_State_t state;
     App_Fault_t fault;
     App_Mode_t  mode;
+    App_Phase_t phase;
 
     uint8_t slave1_online;
     uint8_t slave2_online;
@@ -119,31 +142,24 @@ typedef struct
    ========================= */
 
 void App_Init(void);
-
 void App_Task(void);
 
 
 /* 参数配置 */
 uint8_t App_SetConfig(const App_Config_t *config);
-
 void App_GetConfig(App_Config_t *config);
 
 
 /* 系统控制 */
 App_StartResult_t App_RequestStart(void);
-
 void App_RequestStop(void);
-
 void App_AcknowledgeFinished(void);
-
 void App_ClearFault(void);
 
 
 /* 状态读取 */
 void App_GetRuntime(App_Runtime_t *runtime);
-
 App_State_t App_GetState(void);
-
 App_Fault_t App_GetFault(void);
 
 

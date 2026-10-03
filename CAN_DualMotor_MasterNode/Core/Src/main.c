@@ -35,6 +35,7 @@
 #include "Bsp_Can.h"
 #include "can_protocol.h"
 #include "App.h"
+#include "state_machine.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -98,12 +99,6 @@ static Can_MotorStatus_t slave2_status;
 static uint32_t last_cmd_tick = 0;
 static uint32_t last_oled_tick = 0;
 
-static uint8_t slave1_rx_ok = 0;
-static uint8_t slave2_rx_ok = 0;
-
-static uint8_t test_done = 0;
-static uint8_t last_state = 0xFF;
-
 //异步电机测试
 static App_Config_t test_config;
 static App_Runtime_t app_runtime;
@@ -120,85 +115,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static void Test_OLED_Update(void)
-{
-    /*
-     * 位置
-     *
-     * P:+002990
-     */
-    OLED_ShowSignedNum(
-        2,
-        3,
-        slave2_status.total_count,
-        6
-    );
 
-
-    /*
-     * 最近10ms编码器增量
-     *
-     * V:+0008
-     */
-    OLED_ShowSignedNum(
-        3,
-        3,
-        (int32_t)slave2_status.delta_count,
-        4
-    );
-
-
-    /*
-     * 第4行显示Slave状态
-     */
-    if (slave2_status.state != last_state)
-		{
-    last_state = slave2_status.state;
-
-    switch (slave2_status.state)
-    {
-        case CAN_MOTOR_STATE_IDLE:
-            OLED_ShowString(
-                4,
-                1,
-                "ST:IDLE         "
-            );
-            break;
-
-        case CAN_MOTOR_STATE_RUNNING:
-            OLED_ShowString(
-                4,
-                1,
-                "ST:RUN          "
-            );
-            break;
-
-        case CAN_MOTOR_STATE_DONE:
-            OLED_ShowString(
-                4,
-                1,
-                "ST:DONE         "
-            );
-            break;
-
-        case CAN_MOTOR_STATE_FAULT:
-            OLED_ShowString(
-                4,
-                1,
-                "ST:FAULT        "
-            );
-            break;
-
-        default:
-            OLED_ShowString(
-                4,
-                1,
-                "ST:UNKNOWN      "
-            );
-            break;
-    }
-	}
-}
 /* USER CODE END 0 */
 
 /**
@@ -240,6 +157,7 @@ int main(void)
 	OLED_Init();
 	Can_Init();
 	App_Init();
+	StateMachine_Init();
 //OLED_ShowString(1, 1, "TGT:");
 //OLED_ShowString(2, 1, "POS:");
 //OLED_ShowString(3, 1, "SPD:");
@@ -269,24 +187,31 @@ int main(void)
 
 //CAN测试   
 
-test_config.mode = APP_MODE_SYNC;
+//test_config.mode = APP_MODE_ASYNC;
 
-test_config.slave1.target_count = 3000;
-test_config.slave1.target_speed = 10;
-test_config.slave1.direction = 1;
+//test_config.slave1.target_count = 3000;
+//test_config.slave1.target_speed = 10;
+//test_config.slave1.direction = 1;
 
-test_config.slave2.target_count = 3000;
-test_config.slave2.target_speed = 10;
-test_config.slave2.direction = 1;
+//test_config.slave2.target_count = 3000;
+//test_config.slave2.target_speed = 10;
+//test_config.slave2.direction = 1;
 
-test_config.async_delay_ms = 1000;
+//test_config.async_delay_ms = 2000;
 
-App_SetConfig(&test_config);
+//App_SetConfig(&test_config);
 
-OLED_ShowString(1, 1, "SYNC TEST");
-OLED_ShowString(2, 1, "S1:WAIT");
-OLED_ShowString(3, 1, "S2:WAIT");
-OLED_ShowString(4, 1, "WAIT ONLINE");
+//OLED_ShowString(1, 1, "ASYNC TEST");
+//OLED_ShowString(2, 1, "S1:WAIT");
+//OLED_ShowString(3, 1, "S2:WAIT");
+//OLED_ShowString(4, 1, "WAIT ONLINE");
+
+//总机测试
+
+
+
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -296,57 +221,8 @@ OLED_ShowString(4, 1, "WAIT ONLINE");
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		//这下面为CAN测试
-			
-			 uint32_t now;
-
-now = HAL_GetTick();
-
-App_Task();
-
-App_GetRuntime(&app_runtime);
-
-
-/* 两个从机都在线后，只启动一次 */
-if ((sync_started == 0) &&
-    (app_runtime.slave1_online != 0) &&
-    (app_runtime.slave2_online != 0))
-{
-    if (App_RequestStart() == APP_START_OK)
-    {
-        sync_started = 1;
-    }
-}
-
-
-/* OLED 100ms刷新一次 */
-if ((uint32_t)(now - last_oled_tick) >= 100U)
-{
-    last_oled_tick = now;
-
-    OLED_ShowSignedNum(2, 4, app_runtime.slave1_status.total_count, 5);
-    OLED_ShowSignedNum(3, 4, app_runtime.slave2_status.total_count, 5);
-
-    if ((app_runtime.slave1_online == 0) || (app_runtime.slave2_online == 0))
-    {
-        OLED_ShowString(4, 1, "WAIT ONLINE     ");
-    }
-    else if (app_runtime.state == APP_STATE_RUNNING)
-    {
-        OLED_ShowString(4, 1, "ST:RUN          ");
-    }
-    else if (app_runtime.state == APP_STATE_FINISHED)
-    {
-        OLED_ShowString(4, 1, "ST:DONE         ");
-    }
-    else if (app_runtime.state == APP_STATE_FAULT)
-    {
-        OLED_ShowString(4, 1, "ST:FAULT        ");
-    }
-}
-		
-		
-		
+		App_Task();
+		StateMachine_Task();
 		//下面的为电机测试
 //   if (flag_10ms)
 //    {
